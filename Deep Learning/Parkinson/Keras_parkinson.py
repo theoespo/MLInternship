@@ -1,4 +1,4 @@
-from tensorflow.keras import Sequential, layers
+from tensorflow.keras import Sequential, layers, metrics
 from sklearn.model_selection import train_test_split
 from sklearn import preprocessing
 from sklearn.decomposition import PCA
@@ -162,7 +162,7 @@ for m in range(len_mean):
                         layers.Dense(len_layers[i], activation=activations[j]),
                         layers.Dense(1, activation="sigmoid")
                     ])
-                    model.compile(optimizer=optimizers[k], loss="binary_crossentropy", metrics=["accuracy"])
+                    model.compile(optimizer=optimizers[k], loss="binary_crossentropy", metrics=["accuracy", metrics.AUC()])
                     history = model.fit(X_train, y_train, epochs=n_epochs, batch_size=10, validation_data=(X_test, y_test), verbose=0)
                     max_current_acc = max(history.history["val_accuracy"])
                     min_current_loss = min(history.history["val_loss"])

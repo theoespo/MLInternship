@@ -1,4 +1,4 @@
-from tensorflow.keras import Sequential, layers, optimizers, regularizers
+from tensorflow.keras import Sequential, layers, optimizers, regularizers, backend, metrics
 from sklearn.model_selection import train_test_split
 from sklearn import preprocessing
 from sklearn.decomposition import PCA
@@ -132,6 +132,10 @@ else:
 max_parameter_acc = -1
 max_parameter_loss = -1
 
+max_roc = 0
+max_parameter_roc = -1
+min_time_roc = inf
+
 ##############################################################################################################################################
 
 ##############################################################################################################################################
@@ -153,10 +157,11 @@ for m in range(len(n_layers)):
         for j in range(n_layers[m]):
             model.add(layers.Dense(len_layers[i], activation="relu", kernel_regularizer="l2"))
         model.add(layers.Dense(1, activation="sigmoid"))
-        model.compile(optimizer=optimizers.RMSprop(), loss="binary_crossentropy", metrics=["accuracy"])
+        model.compile(optimizer=optimizers.RMSprop(), loss="binary_crossentropy", metrics=["accuracy", metrics.AUC()])
         history = model.fit(X_train, y_train, epochs=n_epochs, batch_size=10, validation_data=(X_test, y_test), verbose=0)
         max_current_acc = max(history.history["val_accuracy"])
         min_current_loss = min(history.history["val_loss"])
+        max_current_roc = max(history.history["val_auc"])
         b = time.process_time()
 
         if max_acc < max_current_acc or (max_acc == max_current_acc and b - a < min_time_acc):
@@ -180,6 +185,13 @@ for m in range(len(n_layers)):
             f = open(path_perf / ("perf_" + filename + "_" + str(n_layers) + "_layers_" + str(split_size) + "_split_best_model_loss.txt"), "w")
             f.write(str(min_loss) + ", " + str(min_time_loss))
             f.close()
+        
+        if max_current_roc > max_roc or (max_roc == max_current_roc and b - a < min_time_roc):
+            max_roc = max_current_roc
+            min_time_roc = b - a
+            max_parameter_roc = len_layers[i], n_layers[m]
+        
+        backend.clear_session()
 
 
 ##############################################################################################################################################
@@ -187,6 +199,7 @@ for m in range(len(n_layers)):
 
 print("Best parameters for minimum loss (", min_loss, ") :", max_parameter_loss)
 print("Best parameters for maximum accuracy (", max_acc, "):", max_parameter_acc)
+print("Best parameters for maximum roc (", max_roc, "):", max_parameter_roc)
 
 epochs = range(1, n_epochs + 1)
 

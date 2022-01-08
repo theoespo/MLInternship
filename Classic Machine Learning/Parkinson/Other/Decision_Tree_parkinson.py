@@ -16,6 +16,16 @@ def num_list(data):
         data_num.append(float(data[i]))
     return data_num
 
+def num_list2(data):
+    data_num = [[] for i in range(len(data))]
+    for i in range(len(data)):
+        for j in range(len(data[i])):
+            if data[i][j] != '':
+                data_num[i].append(float(data[i][j]))
+            else:
+                data_num[i].append(-1000)
+    return data_num
+
 mean_len = 500
 MSS = [2, 5, 10, 15, 20, 25, 30, 40, 50, 60, 70, 80]
 criterion_ = ["entropy", "gini"]
@@ -29,19 +39,19 @@ f = open(path_perf / ("perf_" + filename + "_best_model.txt"), "a")
 f.close()
 f = open(path_perf / ("perf_" + filename + "_best_model.txt"))
     
-prev_perf = []
-for line in f:
-    l = line.split(",")
-    for i in range(len(l)):
-        prev_perf += [float(l[i])]
-f.close()
+# prev_perf = []
+# for line in f:
+#     l = line.split(",")
+#     for i in range(len(l)):
+#         prev_perf += [float(l[i])]
+# f.close()
 
-if len(prev_perf) != 0:
-    max_acc = [0, prev_perf[0]]
-    max_time_acc = [inf, prev_perf[1]]
-else:
-    max_acc = [0, 0]
-    max_time_acc = [inf, inf]
+# if len(prev_perf) != 0:
+#     max_acc = [0, prev_perf[0]]
+#     max_time_acc = [inf, prev_perf[1]]
+# else:
+max_acc = [0, 0]
+max_time_acc = [inf, inf]
 
 max_parameter_acc = [(0, 0), (0, 0)]
 max_roc = 0
@@ -53,6 +63,8 @@ all_max_parameter = []
 weight_max_parameter = []
 average_max_accuracy = []
 
+#########################################################################################################################
+
 file = open("parkinsons.data")
 data = []
 target = []
@@ -63,11 +75,49 @@ for line in file:
     target.append(l[17])
 file.close()
 
-X_train, X_test, y_train, y_test = train_test_split(data[1:], target[1:], test_size=0.25, random_state=33)
+data = num_list2(data[1:])
+target = num_list(target[1:])
+
+X_train, X_test, y_train, y_test = train_test_split(data, target, test_size=0.25, random_state=33)
 
 scaler = preprocessing.StandardScaler().fit(X_train)
 X_train = scaler.transform(X_train)
 X_test = scaler.transform(X_test)
+
+###########################################################################################################################################
+
+# file = open("parkinsons.data")
+# data = []
+# target = []
+
+# for line in file:
+#     l = line.split(",")
+#     data.append(l[1:17] + l[18:])
+#     target.append(l[17])
+# file.close()
+
+# data = num_list2(data[1:])
+# target = num_list(target[1:])
+
+# X_train = []
+# X_test = []
+# y_train = []
+# y_test_oh = []
+# y_test = []
+# for i in range(0, 200):
+
+#     X_train_small, X_test_small, y_train_small, y_test_small = train_test_split(data, target, test_size=0.25, random_state=i, shuffle=True)
+
+#     scaler = preprocessing.StandardScaler().fit(X_train_small)
+#     X_train_small = scaler.transform(X_train_small)
+#     X_test_small = scaler.transform(X_test_small)
+#     # y_test_oh_small = one_hot_encode(y_test_small, 3)
+
+#     X_train.append(X_train_small)
+#     X_test.append(X_test_small)
+#     y_train.append(y_train_small)
+#     # y_test_oh.append(y_test_oh_small)
+#     y_test.append(y_test_small)
 
 for j in range(mean_len):
 
@@ -85,7 +135,7 @@ for j in range(mean_len):
             predicted_target = model.predict(X_test)
 
             current_acc = accuracy_score(y_test, predicted_target)
-            current_roc = roc_auc_score(num_list(y_test), num_list(predicted_target))
+            current_roc = roc_auc_score(y_test, num_list(predicted_target))
             b = time.process_time()
             MSS_time[i] += b - a
 
@@ -98,6 +148,7 @@ for j in range(mean_len):
                 max_acc[1] = current_acc
                 max_parameter_acc[1] = (MSS[i], criterion_[k])
                 max_time_acc[1] = b - a
+                max_seed_acc = j
                 pickle.dump(model, open(path_model / (filename  + "_Best_Model.sav"), "wb"))
                 f = open(path_perf / ("perf_" + filename + "_best_model.txt"), "w")
                 f.write(str(max_acc[1]) + ", " + str(max_time_acc[1]))
@@ -107,6 +158,7 @@ for j in range(mean_len):
                 max_roc = current_roc
                 max_parameter_roc = (MSS[i], criterion_[k])
                 max_time_roc = b - a
+                max_seed_roc = j
             
 
     
@@ -131,7 +183,7 @@ print("\n* Average of maximum accuracy :", mean_max, "\n* Parameters giving a ma
 print("\n===================================================================================================================================\n")
 print("Average time for different value of minimum samples split :\n", MSS_time)
 print("\n===================================================================================================================================\n")
-print("          Best model DT (accuracy) : \n\nMinimum samples split =", max_parameter_acc[1][0], ", criterion :", max_parameter_acc[1][1],"\nAccuracy :", truncate(max_acc[1], 5), "\nTime to process :", max_time_acc[1])
+print("          Best model DT (accuracy) : \n\nMinimum samples split =", max_parameter_acc[1][0], ", criterion :", max_parameter_acc[1][1],"\nAccuracy :", truncate(max_acc[1], 5), "\nTime to process :", max_time_acc[1], max_seed_acc)
 print("\n===================================================================================================================================\n")
-print("          Best model DT (ROC) : \n\nMinimum samples split =", max_parameter_roc[0], ", criterion :", max_parameter_roc[1],"\nROC AUC :", truncate(max_roc, 5), "\nTime to process :", max_time_roc)
+print("          Best model DT (ROC) : \n\nMinimum samples split =", max_parameter_roc[0], ", criterion :", max_parameter_roc[1],"\nROC AUC :", truncate(max_roc, 5), "\nTime to process :", max_time_roc, max_seed_roc)
 

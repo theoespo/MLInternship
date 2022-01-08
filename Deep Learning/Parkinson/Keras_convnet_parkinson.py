@@ -1,4 +1,4 @@
-from tensorflow.keras import Model, layers, Input
+from tensorflow.keras import Model, layers, Input, metrics
 from sklearn.model_selection import train_test_split
 from sklearn import preprocessing
 from sklearn.decomposition import PCA
@@ -140,8 +140,14 @@ x = layers.MaxPooling1D(pool_size=2)(x)
 x = layers.Flatten()(x)
 outputs = layers.Dense(1, activation="sigmoid")(x)
 model = Model(inputs=inputs, outputs=outputs)
-model.compile(optimizer="rmsprop", loss="binary_crossentropy", metrics=["accuracy"])
+model.compile(optimizer="rmsprop", loss="binary_crossentropy", metrics=["accuracy", metrics.AUC()])
 history = model.fit(X_train, y_train, epochs=30, batch_size=20, verbose=0, validation_data=(X_test, y_test))
+
+max_acc = max(history.history["val_accuracy"])
+min_loss = min(history.history["val_loss"])
+max_auc = max(history.history["val_auc"])
+
+print(max_acc, max_auc)
 
 epochs = range(1, 31)
 plt.plot(epochs, history.history["loss"], "b", label="Training Loss")

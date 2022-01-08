@@ -1,6 +1,6 @@
 from numpy.core.fromnumeric import mean
 from sklearn.model_selection import KFold, LeaveOneOut
-from sklearn.metrics import accuracy_score
+from sklearn.metrics import accuracy_score, roc_auc_score
 from sklearn.decomposition import PCA
 from sklearn import tree
 import time, pickle, os
@@ -46,13 +46,17 @@ for line in f:
         param += [float(l[i])]
 f.close()
 
-if len(param) != 0:
-    max_acc = param[0]
-    max_time = param[1]
-else:
-    max_acc = 0
-    max_time = inf
+# if len(param) != 0:
+#     max_acc = param[0]
+#     max_time = param[1]
+# else:
+max_acc = 0
+max_time = inf
 max_parameter = (0, 0, 0)
+
+max_roc = 0
+max_parameter_roc = (0, 0, 0)
+max_time_roc = inf
 
 
 #############################################################################################################################################
@@ -123,6 +127,11 @@ for k in range(len(n_trees)):
 
             max_param_prev = max_parameter
             temp_mean_split = 0
+            max_param_prev_roc = max_parameter_roc
+            temp_mean_split_roc = 0
+            all_acc = np.zeros(shape=(5,))
+            all_roc = np.zeros(shape=(5,))
+            c = 0
             
             for train_index, test_index in kfold.split(data):
 
@@ -135,7 +144,13 @@ for k in range(len(n_trees)):
                 predicted_target = model.predict(X_test)
 
                 current_acc = accuracy_score(y_test, predicted_target)
+                current_roc = roc_auc_score(y_test, predicted_target)
+                temp_mean_split_roc += current_roc
                 temp_mean_split += current_acc
+                all_acc[c] = current_acc
+                all_roc[c] = current_roc
+                c += 1
+
                 b = time.process_time()
 
                 if max_acc < current_acc or (max_acc == current_acc and b - a < max_time):
@@ -146,15 +161,30 @@ for k in range(len(n_trees)):
                     f = open(path_perf / ("perf_" + filename + str(kfold_param) + "-Fold_best_model.txt"), "w")
                     f.write(str(max_acc) + ", " + str(max_time))
                     f.close()
+                
+                if max_roc < current_roc or (max_roc == current_roc and max_time_roc > b - a):
+                    max_roc = current_roc
+                    max_parameter_roc = n_trees[k], MSS[i], criterion_[j]
+                    max_time_roc = b - a
             
             temp_mean_split = temp_mean_split/kfold_param
             if max_param_prev != max_parameter:
                 mean_split = temp_mean_split
+                std_acc = all_acc.std()
+                print(all_acc)
+
+            temp_mean_split_roc = temp_mean_split_roc/kfold_param
+            if max_param_prev_roc != max_parameter_roc:
+                mean_split_roc = temp_mean_split_roc
+                std_roc = all_roc.std()
 
 
 
 
 print("\n===================================================================================================================================\n")
 print("          Best model with Ada Boost based on Decision Tree : \n\nNumber of estimators =", max_parameter[0],"\nMinimum samples split =", max_parameter[1], ", criterion :", max_parameter[2],"\nAccuracy :", truncate(max_acc, 5), "\nTime to process :", max_time)
-print("\nAverage on all splits of the best model :", mean_split)
+print("\n===================================================================================================================================\n")
+print("          Best model with Ada Boost based on Decision Tree : \n\nNumber of estimators =", max_parameter_roc[0],"\nMinimum samples split =", max_parameter_roc[1], ", criterion :", max_parameter_roc[2],"\nAccuracy :", max_roc, "\nTime to process :", max_time_roc)
+print("\nAverage on all splits of the best model (acc):", mean_split, "+/-", std_acc)
+print("\nAverage on all splits of the best model (roc):", mean_split_roc, "+/-", std_roc)
 

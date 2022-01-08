@@ -4,7 +4,7 @@ import time, random
 import numpy as np
 import matplotlib.pyplot as plt
 from math import inf
-from tensorflow.keras import Sequential, layers, metrics, backend
+from tensorflow.keras import Sequential, layers, metrics, backend, callbacks
 
 def truncate(num, n):
     integer = int(num * (10**n))/(10**n)
@@ -78,27 +78,27 @@ file = open("MMCR_2021 .csv")
 #########################################################################################################################################
 # All data (absurd value) (best acc : 82.758% with Number of estimators = 90, Minimum samples split = 30 , criterion : entropy) (best roc : 84.205% with Number of estimators = 80, Minimum samples split = 30 , criterion : gini)
 
-data_type = 0
-data = []
-target = []
-for line in file:
-    l = line.split(",")
-    if l[0] != "id":
-        data.append(l[2:-1] + [l[-1][:-1]])
-        target.append(int(l[1]))
+    data_type = 0
+    data = []
+    target = []
+    for line in file:
+        l = line.split(",")
+        if l[0] != "id":
+            data.append(l[2:-1] + [l[-1][:-1]])
+            target.append(int(l[1]))
 
-data = np.array(num_list2(data))
-target = np.array(target)
-
-
-X_train, X_test, y_train, y_test = train_test_split(data, target, test_size=0.25, random_state=seed, shuffle=True)
+    data = np.array(num_list2(data))
+    target = np.array(target)
 
 
-scaler = preprocessing.StandardScaler().fit(X_train)
-X_train = scaler.transform(X_train)
-X_test = scaler.transform(X_test)
-y_train = vectorize_sequences(y_train, 3)
-y_test = vectorize_sequences(y_test, 3)
+    X_train, X_test, y_train, y_test = train_test_split(data, target, test_size=0.25, random_state=seed, shuffle=True)
+
+
+    scaler = preprocessing.StandardScaler().fit(X_train)
+    X_train = scaler.transform(X_train)
+    X_test = scaler.transform(X_test)
+    y_train = vectorize_sequences(y_train, 3)
+    y_test = vectorize_sequences(y_test, 3)
 
 
 #########################################################################################################################################
@@ -692,7 +692,7 @@ elif data_type == 1:
                         max_parameter_loss.append(reference[max_parameter_loss.pop()])
                         max_parameter_auc.append(reference[max_parameter_auc.pop()])
 
-# elif data_type == 2:
+elif data_type == 2:
 
     # for m in range(len_mean):
 
@@ -718,7 +718,8 @@ elif data_type == 1:
                                 layers.Dense(3, activation="softmax")
                             ])
                             model.compile(optimizer="rmsprop", loss="categorical_crossentropy", metrics=["accuracy", metrics.AUC()])
-                            history = model.fit(X_train[p], y_train[p], epochs=n_epochs, batch_size=10, validation_data=(X_test[p], y_test[p]), verbose=0)
+                            callback = [callbacks.ModelCheckpoint("Melanoma_trained_model_seed" + str(p) + "_v4.keras", save_best_only=True)]
+                            history = model.fit(X_train[p], y_train[p], epochs=60, batch_size=20, verbose=0, validation_data=(X_test[p], y_test[p]), callbacks=callback)
                             max_current_acc = max(history.history["val_accuracy"])
                             min_current_loss = min(history.history["val_loss"])
                             max_current_auc = max(history.history["val_auc"])
